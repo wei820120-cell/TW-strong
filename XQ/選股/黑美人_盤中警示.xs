@@ -9,6 +9,7 @@
        執行頻率選「日」，商品範圍選「上市櫃普通股」或自選股
        通知方式勾選彈跳視窗／聲音／手機推播 → 啟動
   盤中成交量還沒累積完，UseEstVol=1 時用「預估全日量」判斷量增
+  開盤 EstMinMins 分鐘內用實際成交量，避免開盤預估量失真
   ============================================================ }
 
 input: BreakLen(3, "突破區間天數");
@@ -19,6 +20,7 @@ input: MA2Len(10, "MA2天數");
 input: CapLimit(20, "股本上限(億)");
 input: MinVol(1000, "最低成交量(張)");
 input: UseEstVol(1, "盤中用預估量(1=是,0=否)");
+input: EstMinMins(10, "開盤幾分鐘後才用預估量");
 
 variable: upSig(false), dnSig(false);
 variable: sUp(99999), sDn(99999);
@@ -33,7 +35,8 @@ vol = Volume;
 if UseEstVol = 1 and Date = CurrentDate then begin
     t = CurrentTime;
     mins = (IntPortion(t / 10000) - 9) * 60 + Mod(IntPortion(t / 100), 100);
-    if mins > 0 and mins < 270 then vol = Volume * 270 / mins;
+    { 開盤頭幾分鐘預估量會被嚴重放大，先用實際量判斷，避免假爆量 }
+    if mins >= EstMinMins and mins < 270 then vol = Volume * 270 / mins;
 end;
 
 { ---- 突破／跌破前3天高低點（不含今天） ---- }
@@ -61,7 +64,7 @@ if (condA or condB)
    and cap > 0 and cap <= CapLimit
 then begin
     if condA then
-        RetMsg = "寶塔翻紅"
+        RetMsg = "寶塔翻紅 突破價 " + NumToStr(Highest(High, BreakLen)[1], 2)
     else
         RetMsg = "爆量+均線多頭";
     ret = 1;
