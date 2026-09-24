@@ -30,6 +30,9 @@ variable: cap(0), vol(0), t(0), mins(0);
 
 SetTotalBar(LookBack + MA2Len + 20);
 
+{ 新上市、歷史K棒不足的股票直接跳過，避免「引用的歷史資料不存在(5029)」錯誤 }
+if CurrentBar <= BreakLen + MA2Len + 1 then return;
+
 { ---- 盤中預估全日量（09:00~13:30 共 270 分鐘） ---- }
 vol = Volume;
 if UseEstVol = 1 and Date = CurrentDate then begin
