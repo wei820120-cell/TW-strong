@@ -1,6 +1,6 @@
 { ============================================================
   黑美人重建版（XQ 選股腳本）
-  條件：寶塔翻紅（首次由空翻多）或 爆量1.5倍 + 均線多頭
+  條件：今天突破前3天高點，且（寶塔翻紅 或 爆量1.5倍 + 均線多頭）
   濾網：股本 <= 20 億、成交量 > 1000 張
   掃描：判斷日往回 ScanDays 天內，任一天觸發即選出
   ------------------------------------------------------------
@@ -47,7 +47,8 @@ condA = upSig and
 condB = Volume > Volume[1] * VolRatio
         and Average(Close, MA1Len) > Average(Close, MA2Len);
 
-sig = (condA or condB) and Volume > MinVol;
+{ 對照財富守護星實測：必須當天突破，且(翻紅 或 爆量) }
+sig = upSig and (condA or condB) and Volume > MinVol;
 
 { 更新「距上次訊號幾根」計數 }
 if upSig then sUp = 0 else sUp = prevUp;
