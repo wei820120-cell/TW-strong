@@ -1,0 +1,124 @@
+# 產業雷達設定
+# 新增來源、關鍵字、台股對應族群都改這個檔就好，不用動程式。
+
+# 分數 >= alert_threshold 才推播；>= llm_threshold 且有 ANTHROPIC_API_KEY 才請 Claude 做摘要
+alert_threshold: 6
+llm_threshold: 6
+max_llm_per_run: 8
+# Claude 評的重要性 (1-5) 低於這個就不推
+min_importance: 3
+# 只處理最近幾小時內的新聞（避免第一次跑就把舊聞全推出來）
+max_age_hours: 48
+
+sources:
+  # --- Google News 搜尋 RSS：用關鍵字組合撈大單、capex、供應鏈消息 ---
+  - type: google_news
+    name: AI 大單 (EN)
+    query: '(Anthropic OR OpenAI OR xAI OR "Meta Platforms" OR Microsoft OR Oracle OR CoreWeave) ("multi-year agreement" OR "billion agreement" OR "compute deal" OR "cloud deal" OR warrant)'
+    lang: en
+  - type: google_news
+    name: Capex / 記憶體 (EN)
+    query: '(capex OR "capital expenditure" OR "capital spending") (memory OR DRAM OR HBM OR "pre-purchase" OR "secure supply")'
+    lang: en
+  - type: google_news
+    name: 記憶體報價 / 缺貨 (EN)
+    query: '(DRAM OR HBM OR DDR5 OR NAND) (shortage OR "contract price" OR "price hike" OR allocation)'
+    lang: en
+  - type: google_news
+    name: AI 供應鏈 (中文)
+    query: '(Anthropic OR OpenAI OR 輝達 OR 資本支出) (記憶體 OR 伺服器 OR 大單 OR 合約 OR 億美元)'
+    lang: zh-TW
+
+  # --- SEC 8-K：美國公司簽大約、改 capex 會先出現在這裡 ---
+  # CIK 可在 https://www.sec.gov/cgi-bin/browse-edgar?company=<名稱> 查到
+  - type: sec_8k
+    name: SEC 8-K
+    ciks:
+      AKAM: 1086222
+      MSFT: 789019
+      GOOGL: 1652044
+      AMZN: 1018724
+      META: 1326801
+      ORCL: 1341439
+      NVDA: 1045810
+      MU: 723125
+      DELL: 1571996
+      SMCI: 1375365
+      NET: 1477333
+      JBL: 898293
+      CRWV: 1769628
+
+  # --- 台灣上市公司每日重大訊息（證交所 OpenAPI）---
+  - type: twse_material
+    name: 上市重大訊息
+    url: https://openapi.twse.com.tw/v1/opendata/t187ap04_L
+
+  # --- 其他任何 RSS 都能加，例如公司 IR 或新聞網站 ---
+  # - type: rss
+  #   name: 某某 IR
+  #   url: https://example.com/rss.xml
+
+# 關鍵字群組：同一群組命中多個字只算一次分數
+keyword_groups:
+  ai_buyer:
+    weight: 3
+    words: [anthropic, openai, xai, hyperscaler, 超大規模, "meta platforms", coreweave, "stargate"]
+  big_deal:
+    weight: 3
+    words: ["multi-year agreement", "multi-year deal", "compute deal", "cloud deal", commitment, "purchase agreement", 合約, 大單, 承諾金額, 長約]
+  capex:
+    weight: 3
+    words: [capex, "capital expenditure", "capital spending", 資本支出]
+  supply_lock:
+    weight: 3
+    words: [pre-purchase, prepay, "secure supply", "secure components", allocation, shortage, 預購, 預付, 缺貨, 鎖貨, 包產能]
+  memory:
+    weight: 2
+    words: [memory, dram, hbm, ddr5, nand, ssd, 記憶體, 快閃記憶體]
+  compute:
+    weight: 2
+    words: [cpu, gpu, server, "data center", datacenter, edge, inference, 伺服器, 資料中心, 邊緣, 推論]
+  equity_link:
+    weight: 2
+    words: [warrant, "equity stake", "convertible preferred", 認股權證, 入股, 持股]
+  guidance:
+    weight: 2
+    words: [raises guidance, "raised guidance", "raises outlook", 上修, 調高財測]
+
+# 出現金額（$11.6 billion、116億美元…）額外加分
+amount_bonus: 2
+# 同時命中「AI 買家」+「大單/capex」這種組合，再加分
+combo_bonus:
+  - groups: [ai_buyer, big_deal]
+    bonus: 2
+  - groups: [capex, supply_lock]
+    bonus: 2
+  - groups: [capex, memory]
+    bonus: 1
+
+# 題材 → 台股觀察名單（命中題材關鍵字就附上）
+themes:
+  DRAM:
+    words: [dram, hbm, ddr5, memory, 記憶體]
+    tickers: {"2408": 南亞科, "2344": 華邦電, "2337": 旺宏}
+  記憶體模組:
+    words: [memory, dram, ddr5, module, 記憶體, 模組]
+    tickers: {"3260": 威剛, "4967": 十銓, "2451": 創見}
+  NAND/SSD:
+    words: [nand, ssd, flash, storage, 快閃, 儲存]
+    tickers: {"8299": 群聯, "3260": 威剛}
+  伺服器 ODM:
+    words: [server, cpu, "data center", datacenter, edge, 伺服器, 資料中心, 邊緣]
+    tickers: {"2317": 鴻海, "2382": 廣達, "2356": 英業達, "6669": 緯穎, "3231": 緯創}
+  AI GPU 伺服器:
+    words: [gpu, nvidia, 輝達, gb200, gb300, rubin]
+    tickers: {"2382": 廣達, "3231": 緯創, "6669": 緯穎, "2317": 鴻海}
+  散熱/電源:
+    words: ["liquid cooling", cooling, "power supply", 散熱, 液冷, 電源]
+    tickers: {"3017": 奇鋐, "3324": 雙鴻, "2308": 台達電}
+  網通/光通訊:
+    words: [optical, networking, switch, "co-packaged", 光通訊, 交換器, cpo]
+    tickers: {"2345": 智邦, "3363": 上詮, "4979": 華星光}
+  晶圓代工/先進封裝:
+    words: [tsmc, foundry, cowos, "advanced packaging", 台積電, 先進封裝]
+    tickers: {"2330": 台積電, "3711": 日月光投控}
