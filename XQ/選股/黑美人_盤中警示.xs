@@ -21,6 +21,7 @@ input: CapLimit(20, "股本上限(億)");
 input: MinVol(1000, "最低成交量(張)");
 input: UseEstVol(1, "盤中用預估量(1=是,0=否)");
 input: EstMinMins(10, "開盤幾分鐘後才用預估量");
+input: UseCap(1, "股本濾網(1=開,0=關)");
 
 variable: upSig(false), dnSig(false);
 variable: sUp(99999), sDn(99999);
@@ -65,7 +66,7 @@ cap = GetField("股本(億)", "D");
 { 對照財富守護星實測：必須今天突破，且(翻紅 或 爆量) }
 if upSig and (condA or condB)
    and Volume > MinVol
-   and cap > 0 and cap <= CapLimit
+   and (UseCap = 0 or (cap > 0 and cap <= CapLimit))
 then begin
     if condA then
         RetMsg = "寶塔翻紅 突破價 " + NumToStr(Highest(High, BreakLen)[1], 2)
