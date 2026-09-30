@@ -61,12 +61,13 @@ condB = vol > Volume[1] * VolRatio
 if upSig then sUp = 0 else sUp = prevUp;
 if dnSig then sDn = 0 else sDn = prevDn;
 
+{ 警示腳本可能讀不到股本（回傳 0），讀不到時不擋，避免整個策略都不觸發 }
 cap = GetField("股本(億)", "D");
 
 { 對照財富守護星實測：必須今天突破，且(翻紅 或 爆量) }
 if upSig and (condA or condB)
    and Volume > MinVol
-   and (UseCap = 0 or (cap > 0 and cap <= CapLimit))
+   and (UseCap = 0 or cap <= CapLimit)
 then begin
     if condA then
         RetMsg = "寶塔翻紅 突破價 " + NumToStr(Highest(High, BreakLen)[1], 2)
